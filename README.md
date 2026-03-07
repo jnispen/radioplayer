@@ -2,7 +2,7 @@
 
 A minimal application to play internet radio streams.
 
-The RadioPlayer application reads internet radio stream URL's from a text file and plays them using the commandline mpg123 (mpeg) audio player. Stream playback is controlled via an IR remote by reading keyevents from an HID input device.
+The RadioPlayer application reads internet radio stream URL's from a text file and plays them using the commandline mpg123 (mpeg) or ffplay audio players. Stream playback is controlled via an IR remote by reading keyevents from an HID input device.
 
 The application was created on a Raspberry Pi 3 running Raspbian GNU/Linux 11 (bullseye), mounted with a HiFiBerry DAC+. IR remote control button events are read from a FLIRC USB Universal Remote Control Receiver device.
 
@@ -31,8 +31,12 @@ Example usage:
 read_keyevent /dev/input/event0
 ```
 
-### 3. MPEG Audio Player
-For stream playback the commandline audio player 'mpg123' is used. Project details can be found here: https://mpg123.org
+### 3.Audio Players
+#### 3.1 mpg123
+For stream playback the commandline audio player 'mpg123' is used by default. Project details can be found here: https://mpg123.org
+
+#### 3.2 ffplay
+If desired an alternative audio player 'ffplay' can be configured. This player has the advantage that is alble to playback many more audio formats next to MP3, like for example AAC, which is also often used as an audio streaming format. Project details can be found here: https://ffmpeg.org/about.html
 
 ### 4. Search for Internet Radio Streams
 There are many databases tracking internet radio streams. One of the larger and well known ones is: https://fmstream.org
@@ -40,12 +44,19 @@ There are many databases tracking internet radio streams. One of the larger and 
 After copying an audio stream URL, you can test it from the cmdline in the following way:
 ```
 curl -s <audio stream URL> | mpg123 -
+curl -s <audio stream URL> | ffplay -nodisp -autoexit -
 ```
 The list of audio streams can be added to a regular text file, using one audio stream URL per line. Only valid http:// and https:// URL's will be read by the application during startup.
 
 ### 5. Compiling the RadioPlayer
 ```
 g++ -Wall -Wextra -O2 radioplayer.cpp -o radioplayer
+```
+
+This will use the mpg123 player for stream playback. To use ffplay compile in the following way:
+
+```
+g++ -Wall -Wextra -O2 -DAUDIO_PLAYER=\"ffplay\" radioplayer.cpp -o radioplayer
 ```
 
 After compilation the application is run in the following way:  
