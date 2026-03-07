@@ -14,7 +14,6 @@
 #include <signal.h>
 #include <fstream>
 
-// keycode to remote control button mapping
 #define KEY_1_CODE      2
 #define KEY_2_CODE      3
 #define KEY_3_CODE      4
@@ -28,12 +27,19 @@
 #define KEY_LEFT_CODE   105
 #define KEY_RIGHT_CODE  106
 
+#ifndef AUDIO_PLAYER
+#define AUDIO_PLAYER "mpg123"
+#endif
+
 class RadioPlayer {
 private:
     std::vector<std::string> inetstreams;
     std::string device;
     std::string str_input_file;
     std::string system_cmd;
+    std::string system_kill_cmd;
+    std::string player_str;
+    std::string player_;
     int fevdev;
     unsigned int idx;
     unsigned int inet_len;
@@ -41,9 +47,11 @@ private:
 
 public:
     RadioPlayer(const std::string& device_path,
-                const std::string& streams_file_path)
+                const std::string& streams_file_path,
+                const std::string& player)
         : device(device_path),
           str_input_file(streams_file_path),
+          player_(player),
           idx(0) {
 
         fevdev = -1;
@@ -53,6 +61,17 @@ public:
 
         if (inetstreams.empty()) {
             std::cerr << "Error: No streams loaded from " << streams_file_path << std::endl;
+            exit(1);
+        }
+
+        if (player == "mpg123") {
+            system_kill_cmd = "killall mpg123 2>/dev/null";
+            player_str = "mpg123 --preload 0.2 -";
+        } else if (player == "ffplay") {
+            system_kill_cmd = "killall ffplay 2>/dev/null";
+            player_str = "ffplay -nodisp -autoexit -loglevel warning -";
+        } else {
+            std::cerr << "Error: Unknown audio player: " << player << std::endl;
             exit(1);
         }
 
@@ -181,8 +200,8 @@ private:
     }
 
     void killStream() {
-        std::cout << "\n\n>>> CMD [killall mpg123]\n";
-        system("killall mpg123 2>/dev/null");
+        std::cout << "\n\n>>> CMD [STOP playback]\n";
+        system((system_kill_cmd).c_str());
     }
 
     void playStream(int index) {
@@ -191,7 +210,7 @@ private:
             return;
         }
 
-        system("killall mpg123 2>/dev/null");
+        system((system_kill_cmd).c_str());
 
         pid_t pid = fork();
         if (pid == -1) {
@@ -199,12 +218,12 @@ private:
             return;
         }
         if (pid == 0) {
-            system_cmd = "curl -s '" + inetstreams[index] + "' | mpg123 --preload 0.2 -";
+            system_cmd = "curl -s '" + inetstreams[index] +  + "' | " + player_str;
             std::cout << "\n\n>>> CMD [" << system_cmd << "]\n";
             execlp("sh", "sh", "-c", 
                 (system_cmd).c_str(), nullptr);
 
-			std::cerr << "Error: execlp() failed to execute shell: " << strerror(errno) << std::endl;
+            std::cerr << "Error: execlp() failed to execute shell: " << strerror(errno) << std::endl;
             exit(1);
         }
 
@@ -226,7 +245,7 @@ int main(int argc, char* argv[]) {
 
     signal(SIGINT, handle_sigint);
 
-    RadioPlayer player(argv[1], argv[2]);
+    RadioPlayer player(argv[1], argv[2], AUDIO_PLAYER);
     player.run();
 
     return 0;
