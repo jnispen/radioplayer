@@ -38,7 +38,7 @@ For stream playback the (MP3) audio player 'mpg123' is used by default. Project 
 #### 3.2 ffplay
 If desired an alternative audio player 'ffplay' can be configured. This player has the advantage that is able to playback many more audio formats next to MP3, like for example AAC, which is also often used as an audio streaming format. Project details can be found here: https://ffmpeg.org/about.html
 
-### 4. Search for Internet Radio Streams
+### 4. Searching for Internet Radio Streams
 There are many databases tracking internet radio streams. One of the larger and well known ones is: https://fmstream.org
 
 After copying an audio stream URL, you can test it from the commandline in either of the following ways, depending on the player chosen:
