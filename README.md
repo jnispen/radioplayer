@@ -67,7 +67,7 @@ Running the application:
 radioplayer <event input device> <path to audio streams file>
 ```
 ### 6. Run the RadioPlayer using 'screen' (in detached-mode)
-For most practical usecases the player will need to be run in the background. This can be acchieved by running the application using 'screen' in detached mode (for more options see 'man screen'). For example like:
+For most practical usecases the player will need to be run in the background. This can be acchieved by running the application using 'screen' in detached mode (for more options see 'man screen'). For example:
 
 ```
 screen -d -m /home/guest/radioplayer /dev/input/event0 /home/guest/radiostreams.txt
