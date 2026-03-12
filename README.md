@@ -2,7 +2,7 @@
 
 A minimal application to play internet radio streams.
 
-The RadioPlayer application reads internet radio stream URL's from a text file and plays them using the commandline 'mpg123' (mpeg) or 'ffplay' audio player. Stream playback is controlled via an IR remote by reading keyevents from an HID input device.
+The RadioPlayer application reads internet radio stream URL's from a text file and plays them using the commandline 'mpg123' or 'mplayer' audio player. Stream playback is controlled via an IR remote by reading keyevents from an HID input device.
 
 The application was created on a Raspberry Pi 3 running Raspbian GNU/Linux 11 (bullseye), mounted with a HiFiBerry DAC+. IR remote control button events are read from a FLIRC USB Universal Remote Control Receiver device.
 
@@ -35,18 +35,15 @@ read_keyevent /dev/input/event0
 #### 3.1 mpg123
 For stream playback the (MP3) audio player 'mpg123' is used by default. Project details can be found here: https://mpg123.org
 
-#### 3.2 ffplay
-If desired an alternative audio player 'ffplay' can be configured. This player has the advantage that is able to playback many more audio formats next to MP3, like for example AAC, which is also often used as an audio streaming format. Project details can be found here: https://ffmpeg.org/about.html
+#### 3.2 mplayer
+If desired an alternative audio player 'mplayer' can be configured. This player has the advantage that is able to playback many more audio formats next to MP3, like for example AAC, which is also often used as an audio streaming format. Project details can be found here: https://mplayerhq.hu/design7/info.html
 
 ### 4. Searching for Internet Radio Streams
 There are many databases tracking internet radio streams. One of the larger and well known ones is: https://fmstream.org
 
 After copying an audio stream URL, you can test it from the commandline in either of the following ways, depending on the player chosen:
 ```
-curl -s <audio stream URL> | mpg123 -
-```
-```
-curl -s <audio stream URL> | ffplay -nodisp -autoexit -
+[mpg123|mplayer] <audio stream URL>
 ```
 The list of audio streams can be added to a regular text file, using one audio stream URL per line. Only valid http:// and https:// URL's will be read by the application during startup.
 
@@ -56,10 +53,10 @@ Default compilation is as follows:
 g++ -Wall -Wextra -O2 radioplayer.cpp -o radioplayer
 ```
 
-To use 'ffplay' as player use:
+To use 'mplayer' as player use:
 
 ```
-g++ -Wall -Wextra -O2 -DAUDIO_PLAYER=\"ffplay\" radioplayer.cpp -o radioplayer
+g++ -Wall -Wextra -O2 -DAUDIO_PLAYER=\"mplayer\" radioplayer.cpp -o radioplayer
 ```
 
 Running the application:

@@ -1,6 +1,6 @@
-https://streams.pinguinradio.com/Aardschok192.mp3
-https://icecast.omroep.nl/radio1-bb-mp3
-https://icecast.omroep.nl/radio2-bb-mp3
-https://icecast.omroep.nl/3fm-bb-mp3
-https://stream.live.vc.bbcmedia.co.uk/bbc_world_service_americas
-https://s02.fjperezdj.com:8060/live
+http://streams.pinguinradio.com/Aardschok192.mp3
+http://icecast.omroep.nl/radio1-bb-mp3
+http://icecast.omroep.nl/radio2-bb-mp3
+http://icecast.omroep.nl/3fm-bb-mp3
+http://stream.live.vc.bbcmedia.co.uk/bbc_world_service_americas
+http://s02.fjperezdj.com:8060/live
