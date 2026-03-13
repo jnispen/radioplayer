@@ -64,18 +64,19 @@ public:
             exit(1);
         }
 
+        system("> /tmp/radioplayer.log");
+
         if (player == "mpg123") {
-            system_kill_cmd = "killall mpg123 2>/dev/null";
-            player_str = "mpg123 --preload 0.2 -";
-        } else if (player == "ffplay") {
-            system_kill_cmd = "killall ffplay 2>/dev/null";
-            player_str = "ffplay -nodisp -autoexit -loglevel warning -";
+			player_str = "mpg123 --timeout 5 ";
+        } else if (player == "mplayer") {
+            player_str = "mplayer -quiet ";
         } else {
             std::cerr << "Error: Unknown audio player: " << player << std::endl;
             exit(1);
         }
+        system_kill_cmd = "killall " + player + " 2>/dev/null; echo 'STOP playback' >> /tmp/radioplayer.log";
 
-        inet_len = inetstreams.size();
+		inet_len = inetstreams.size();
         idx = inet_len;
         offset = idx * 100;
     }
@@ -218,7 +219,7 @@ private:
             return;
         }
         if (pid == 0) {
-            system_cmd = "curl -s '" + inetstreams[index] +  + "' | " + player_str;
+			system_cmd = player_str + inetstreams[index] + " 2>&1 | tee -a /tmp/radioplayer.log";
             std::cout << "\n\n>>> CMD [" << system_cmd << "]\n";
             execlp("sh", "sh", "-c", 
                 (system_cmd).c_str(), nullptr);
