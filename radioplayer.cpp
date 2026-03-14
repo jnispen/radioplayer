@@ -67,7 +67,7 @@ public:
         system("> /tmp/radioplayer.log");
 
         if (player == "mpg123") {
-			player_str = "mpg123 --timeout 5 ";
+			player_str = "mpg123 -o alsa --buffer 2096 --preload 0.8 -r 44100 ";
         } else if (player == "mplayer") {
             player_str = "mplayer -quiet ";
         } else {
