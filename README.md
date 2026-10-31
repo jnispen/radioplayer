@@ -15,7 +15,7 @@ https://docs.flirc.io/flirc-usb/
 For Debian the Flirc cmdline tools can be downloaded from (use armhf arch):
 http://apt.flirc.tv/arch/
 
-To control playback, the application uses the IR remote control buttons 1-9 (play streams 0-8), 0 (stop playback), arrow-left (play previous stream) and arrow-right (play next stream). These buttons are mapped to different keycodes which are read from the USB HID input device.
+To control playback, the application uses the IR remote control buttons 1-9 (play entries 0-8), 0 (stop playback), arrow-left (previous entry) and arrow-right (next entry). A separate button mapped to the `M` key switches between radio and music modes. These key events are read from the USB HID input device. In either mode, the number and arrow buttons operate on that mode's list; switching modes stops playback. In music mode, songs advance automatically and the list repeats from the beginning after the last song.
 
 ### 2. Testing the USB Universal Remote Control Receiver
 
@@ -45,7 +45,14 @@ After copying an audio stream URL, you can test it from the commandline in eithe
 ```
 [mpg123|mplayer] <audio stream URL>
 ```
-The list of audio streams can be added to a regular text file, using one audio stream URL per line. Only valid http:// and https:// URL's will be read by the application during startup.
+The list of audio streams can be added to a regular text file, using one audio stream URL per line. Only valid http:// and https:// URLs will be read by the application during startup.
+
+For local music, create a separate songlist text file with one absolute path to a readable audio file per line. Blank lines and lines starting with `#` are ignored. For example:
+```
+/home/guest/Music/song-one.mp3
+/home/guest/Music/song two.mp3
+```
+Relative paths, missing files, and non-regular files are ignored with a warning.
 
 ### 5. Compiling the RadioPlayer
 Default compilation is as follows:
@@ -59,14 +66,20 @@ To use 'mplayer' as player use:
 g++ -Wall -Wextra -O2 -DAUDIO_PLAYER=\"mplayer\" radioplayer.cpp -o radioplayer
 ```
 
-Running the application:
+Running the application with radio mode only (unchanged):
 ```
 radioplayer <event input device> <path to audio streams file>
 ```
+
+To enable music mode, pass the songlist as the optional third argument:
+```
+radioplayer <event input device> <path to audio streams file> <path to music songlist>
+```
+Map the spare remote button to the `M` key in Flirc to toggle modes. Linux reports this as keycode 50. The `M` button is ignored if no valid songs were loaded.
+
 ### 6. Run the RadioPlayer using 'screen' (in detached-mode)
 For most practical usecases the player will need to be run in the background. This can be acchieved by running the application using 'screen' in detached mode (for more options see 'man screen'). For example:
 
 ```
-screen -d -m /home/guest/radioplayer /dev/input/event0 /home/guest/radiostreams.txt
+screen -d -m /home/guest/radioplayer /dev/input/event0 /home/guest/radiostreams.txt /home/guest/songlist.txt
 ```
-
