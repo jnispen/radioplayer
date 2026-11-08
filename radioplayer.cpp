@@ -18,6 +18,8 @@
 #include <ctime>
 #include <random>
 
+volatile sig_atomic_t stop_requested = 0;
+
 #define KEY_1_CODE      2
 #define KEY_2_CODE      3
 #define KEY_3_CODE      4
@@ -44,9 +46,7 @@ private:
     std::string device;
     std::string str_input_file;
     std::string str_songlist_file;
-    std::string system_cmd;
-    std::string system_kill_cmd;
-    std::string player_str;
+    std::string log_file;
     std::string player_;
     int fevdev;
     pid_t player_pid;
@@ -63,6 +63,7 @@ public:
         : device(device_path),
           str_input_file(streams_file_path),
           str_songlist_file(songlist_file_path),
+          log_file("/tmp/radioplayer.log"),
           player_(player),
           player_pid(-1),
           idx(0),
@@ -85,20 +86,22 @@ public:
             exit(1);
         }
 
-        system("> /tmp/radioplayer.log");
-
-        if (player == "mpg123") {
-			player_str = "mpg123 -o alsa --buffer 2096 --preload 0.8 -r 44100 ";
-        } else if (player == "mplayer") {
-            player_str = "mplayer -quiet ";
+        int log_fd = open(log_file.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (log_fd == -1) {
+            std::cerr << "Warning: Unable to initialize log file " << log_file
+                      << ": " << strerror(errno) << std::endl;
         } else {
+            close(log_fd);
+        }
+
+        if (player != "mpg123" && player != "mplayer") {
             std::cerr << "Error: Unknown audio player: " << player << std::endl;
             exit(1);
         }
-        system_kill_cmd = "killall " + player + " 2>/dev/null; echo 'STOP playback' >> /tmp/radioplayer.log";
     }
 
     ~RadioPlayer() {
+        stopPlayer();
         if (fevdev != -1) {
             close(fevdev);
         }
@@ -193,7 +196,7 @@ public:
         std::vector<input_event> ev(MAX_EVENTS);
         const int BYTES_TO_READ = ev.size() * sizeof(input_event);
 
-        while (true) {
+        while (!stop_requested) {
             struct pollfd event_fd;
             event_fd.fd = fevdev;
             event_fd.events = POLLIN;
@@ -240,6 +243,8 @@ public:
             close(fevdev);
             fevdev = -1;
         }
+
+        stopPlayer();
 
         std::cout << "Exiting" << std::endl; 
     }
@@ -335,8 +340,7 @@ private:
     void killStream() {
         advance_on_completion = false;
         std::cout << "\n\n>>> CMD [STOP playback]\n";
-        system((system_kill_cmd).c_str());
-        waitForPlayer();
+        stopPlayer();
     }
 
     void playItem(unsigned int index) {
@@ -348,8 +352,30 @@ private:
 
         idx = index;
         advance_on_completion = false;
-        system((system_kill_cmd).c_str());
-        waitForPlayer();
+        stopPlayer();
+
+        std::vector<std::string> arguments;
+        arguments.push_back(player_);
+        if (player_ == "mpg123") {
+            arguments.push_back("-o");
+            arguments.push_back("alsa");
+            arguments.push_back("--buffer");
+            arguments.push_back("2096");
+            arguments.push_back("--preload");
+            arguments.push_back("0.8");
+            arguments.push_back("-r");
+            arguments.push_back("44100");
+        } else {
+            arguments.push_back("-quiet");
+        }
+        arguments.push_back(list[index]);
+
+        std::vector<char*> argv;
+        argv.reserve(arguments.size() + 1);
+        for (std::string& argument : arguments) {
+            argv.push_back(const_cast<char*>(argument.c_str()));
+        }
+        argv.push_back(nullptr);
 
         pid_t pid = fork();
         if (pid == -1) {
@@ -357,18 +383,24 @@ private:
             return;
         }
         if (pid == 0) {
-			system_cmd = player_str + shellQuote(list[index]) + " 2>&1 | tee -a /tmp/radioplayer.log";
-            std::cout << "\n\n>>> CMD [" << system_cmd << "]\n";
-            execlp("sh", "sh", "-c", 
-                (system_cmd).c_str(), nullptr);
+            int child_log_fd = open(log_file.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+            if (child_log_fd != -1) {
+                if (dup2(child_log_fd, STDOUT_FILENO) == -1 ||
+                    dup2(child_log_fd, STDERR_FILENO) == -1) {
+                    _exit(126);
+                }
+                close(child_log_fd);
+            }
 
-            std::cerr << "Error: execlp() failed to execute shell: " << strerror(errno) << std::endl;
-            exit(1);
+            execvp(player_.c_str(), argv.data());
+            const char message[] = "RadioPlayer: failed to execute audio player\n";
+            const ssize_t ignored = write(STDERR_FILENO, message, sizeof(message) - 1);
+            (void)ignored;
+            _exit(127);
         }
 
         player_pid = pid;
         advance_on_completion = music_mode;
-        waitpid(pid, nullptr, WNOHANG);
     }
 
     void checkPlaybackCompletion() {
@@ -397,33 +429,42 @@ private:
         }
     }
 
-    void waitForPlayer() {
+    void stopPlayer() {
         if (player_pid <= 0) {
             return;
         }
 
-        while (waitpid(player_pid, nullptr, 0) < 0 && errno == EINTR) {
+        const pid_t pid = player_pid;
+        if (kill(pid, SIGTERM) == -1 && errno != ESRCH) {
+            std::cerr << "Warning: Unable to stop audio player: "
+                      << strerror(errno) << std::endl;
+        }
+
+        int status;
+        for (int attempt = 0; attempt < 20; ++attempt) {
+            pid_t result = waitpid(pid, &status, WNOHANG);
+            if (result == pid || (result == -1 && errno == ECHILD)) {
+                player_pid = -1;
+                return;
+            }
+            if (result == -1 && errno != EINTR) {
+                break;
+            }
+            usleep(50000);
+        }
+
+        if (kill(pid, SIGKILL) == -1 && errno != ESRCH) {
+            std::cerr << "Warning: Unable to force-stop audio player: "
+                      << strerror(errno) << std::endl;
+        }
+        while (waitpid(pid, &status, 0) == -1 && errno == EINTR) {
         }
         player_pid = -1;
     }
-
-    std::string shellQuote(const std::string& value) const {
-        std::string quoted = "'";
-        for (std::string::const_iterator ch = value.begin(); ch != value.end(); ++ch) {
-            if (*ch == '\'') {
-                quoted += "'\\''";
-            } else {
-                quoted += *ch;
-            }
-        }
-        quoted += "'";
-        return quoted;
-    }
 };
 
-void handle_sigint(int /*sig*/) {
-    std::cout << "Caught SIGINT. Exiting gracefully.." << std::endl;
-    exit(0);
+void handle_stop_signal(int /*sig*/) {
+    stop_requested = 1;
 }
 
 int main(int argc, char* argv[]) {
@@ -433,7 +474,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    signal(SIGINT, handle_sigint);
+    signal(SIGINT, handle_stop_signal);
+    signal(SIGTERM, handle_stop_signal);
 
     RadioPlayer player(argv[1], argv[2], AUDIO_PLAYER, argc == 4 ? argv[3] : "");
     player.run();
