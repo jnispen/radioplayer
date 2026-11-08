@@ -15,6 +15,8 @@
 #include <signal.h>
 #include <fstream>
 #include <cerrno>
+#include <ctime>
+#include <random>
 
 #define KEY_1_CODE      2
 #define KEY_2_CODE      3
@@ -29,6 +31,7 @@
 #define KEY_LEFT_CODE   105
 #define KEY_RIGHT_CODE  106
 #define KEY_M_CODE      50 // Linux input keycode for M
+#define KEY_R_CODE      19 // Linux input keycode for R
 
 #ifndef AUDIO_PLAYER
 #define AUDIO_PLAYER "mpg123"
@@ -50,6 +53,7 @@ private:
     unsigned int idx;
     bool music_mode;
     bool advance_on_completion;
+    std::mt19937 random_generator;
 
 public:
     RadioPlayer(const std::string& device_path,
@@ -63,7 +67,9 @@ public:
           player_pid(-1),
           idx(0),
           music_mode(false),
-          advance_on_completion(false) {
+          advance_on_completion(false),
+          random_generator(static_cast<std::mt19937::result_type>(std::time(nullptr)) ^
+                           static_cast<std::mt19937::result_type>(getpid())) {
 
         fevdev = -1;
         if (!readstreams()) {
@@ -292,10 +298,26 @@ private:
                     playItem(idx);
                 }
                 break;
+            case KEY_R_CODE:
+                playRandomItem();
+                break;
             case KEY_M_CODE:
                 toggleMode();
                 break;
         }
+    }
+
+    void playRandomItem() {
+        const unsigned int list_len = currentList().size();
+        if (list_len == 0) {
+            return;
+        }
+
+        std::uniform_int_distribution<unsigned int> distribution(0, list_len - 1);
+        const unsigned int random_idx = distribution(random_generator);
+        std::cout << "Randomly selected entry " << (random_idx + 1)
+                  << " of " << list_len << std::endl;
+        playItem(random_idx);
     }
 
     void toggleMode() {

@@ -15,7 +15,7 @@ https://docs.flirc.io/flirc-usb/
 For Debian the Flirc cmdline tools can be downloaded from (use armhf arch):
 http://apt.flirc.tv/arch/
 
-To control playback, the application uses the IR remote control buttons 1-9 (play entries 0-8), 0 (stop playback), arrow-left (previous entry) and arrow-right (next entry). A separate button mapped to the `M` key switches between radio and music modes. These key events are read from the USB HID input device. In either mode, the number and arrow buttons operate on that mode's list; switching modes stops playback. In music mode, songs advance automatically and the list repeats from the beginning after the last song.
+To control playback, the application uses the IR remote control buttons 1-9 (play entries 0-8), 0 (stop playback), arrow-left (previous entry), arrow-right (next entry), and `R` (play a random entry). A separate button mapped to the `M` key switches between radio and music modes. These key events are read from the USB HID input device. In either mode, the number, arrow, and `R` buttons operate on that mode's list; switching modes stops playback. In music mode, songs advance automatically from the selected entry and the list repeats from the beginning after the last song.
 
 ### 2. Testing the USB Universal Remote Control Receiver
 
