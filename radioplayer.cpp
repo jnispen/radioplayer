@@ -340,7 +340,7 @@ private:
     void killStream() {
         advance_on_completion = false;
         std::cout << "\n\n>>> CMD [STOP playback]\n";
-        stopPlayer();
+        stopPlayer(true);
     }
 
     void playItem(unsigned int index) {
@@ -352,7 +352,7 @@ private:
 
         idx = index;
         advance_on_completion = false;
-        stopPlayer();
+        stopPlayer(true);
 
         std::vector<std::string> arguments;
         arguments.push_back(player_);
@@ -429,7 +429,31 @@ private:
         }
     }
 
-    void stopPlayer() {
+    void appendStopMarker() {
+        const char marker[] = "STOP playback\n";
+        int log_fd = open(log_file.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+        if (log_fd == -1) {
+            std::cerr << "Warning: Unable to write stop marker to " << log_file
+                      << ": " << strerror(errno) << std::endl;
+            return;
+        }
+
+        ssize_t written;
+        do {
+            written = write(log_fd, marker, sizeof(marker) - 1);
+        } while (written == -1 && errno == EINTR);
+        if (written != (ssize_t)(sizeof(marker) - 1)) {
+            std::cerr << "Warning: Unable to write complete stop marker to "
+                      << log_file << std::endl;
+        }
+        close(log_fd);
+    }
+
+    void stopPlayer(bool emit_stop_marker = false) {
+        if (emit_stop_marker) {
+            appendStopMarker();
+        }
+
         if (player_pid <= 0) {
             return;
         }
